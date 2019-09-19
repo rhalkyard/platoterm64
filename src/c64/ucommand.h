@@ -1,3 +1,12 @@
+/*******************************************************************************
+Low-level API for the 1541 Ultimate II command interface
+
+Derived from Ultimate-II documentation at
+https://1541u-documentation.readthedocs.io/en/latest/command%20interface.html
+
+Copyright Richard Halkyard, 2019
+*******************************************************************************/
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -29,8 +38,6 @@ enum u2_read_source {
     U2_READ_DATA = 0,
     U2_READ_STATUS = 1
 };
-
-extern int unet_errno;
 
 uint8_t u2_check(void);
 void u2_stbuf_enable(char * buf, size_t sz);

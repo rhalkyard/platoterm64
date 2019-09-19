@@ -1,3 +1,13 @@
+/*******************************************************************************
+Simple API for outbound TCP and UDP connections using the Ultimate II ethernet
+interface.
+
+Derived from Ultimate-II firmware source code at
+https://github.com/GideonZ/1541ultimate/blob/master/software/io/network/network_target.cc
+
+Copyright Richard Halkyard, 2019
+*******************************************************************************/
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -16,8 +26,7 @@
 #define NET_CMD_READ_SOCKET         0x10
 #define NET_CMD_WRITE_SOCKET        0x11
 
-
 int unet_open(uint8_t kind, uint16_t port, const char * hostname);
-size_t unet_read(uint8_t sock, uint8_t * buf, size_t len);
-size_t unet_write(uint8_t sock, uint8_t * buf, size_t len);
+int unet_read(uint8_t sock, uint8_t * buf, size_t len);
+int unet_write(uint8_t sock, uint8_t * buf, size_t len);
 void unet_close(uint8_t sock);

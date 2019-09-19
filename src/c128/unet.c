@@ -1,12 +1,28 @@
+/*******************************************************************************
+Simple API for outbound TCP and UDP connections using the Ultimate II ethernet
+interface.
+
+Derived from Ultimate-II firmware source code at
+https://github.com/GideonZ/1541ultimate/blob/master/software/io/network/network_target.cc
+
+Copyright Richard Halkyard, 2019
+*******************************************************************************/
 #include <string.h>
 
 #include "ucommand.h"
 #include "unet.h"
-#include <peekpoke.h>
 
 
-int unet_errno;
-
+/*
+ * Open a TCP or UDP socket
+ *
+ * Arguments:
+ *  kind:       0 for UDP, 1 for TCP
+ *  port:       port to connect to
+ *  hostname:   hostname to connect to
+ *
+ * Returns positive socket ID on success, or negative value on failure.
+ */
 int unet_open(uint8_t kind, uint16_t port, const char * hostname) {
     uint8_t sock;
 
@@ -29,9 +45,21 @@ int unet_open(uint8_t kind, uint16_t port, const char * hostname) {
     return sock;
 }
 
-size_t unet_read(uint8_t sock, uint8_t * buf, size_t len) {
-    size_t sz;
-    uint8_t res[2];
+
+/*
+ * Read data from a socket
+ *
+ * Arguments:
+ *  sock:   socket ID
+ *  buf:    buffer to read data into
+ *  len:    maximum number of bytes to read
+ *
+ * Returns number of bytes read on success. 0 if socket has been closed, -1 if
+ * no data available.
+ */
+int unet_read(uint8_t sock, uint8_t * buf, size_t len) {
+    int sz;
+    int res;
 
     u2_start_cmd();
     U2_CMD = U2_TGT_NET;
@@ -41,22 +69,34 @@ size_t unet_read(uint8_t sock, uint8_t * buf, size_t len) {
     U2_CMD = (len >> 8) & 0x00ff;
     u2_finish_cmd();
 
-    sz = u2_read(res, 2, U2_READ_DATA);
+    // First 2 bytes of data are the return code from the U2's recv() call
+    sz = u2_read((uint8_t *) &res, 2, U2_READ_DATA);
     if (sz != 2) {
-        unet_errno = *(int *) res;
+        // If we didn't get 2 bytes here, something is wrong; bail out.
         u2_accept();
-        return 0;
+        return sz;
     }
 
-    sz = u2_read(buf, len, U2_READ_DATA);
+    // Now we read the socket data
+    sz = u2_read(buf, res, U2_READ_DATA);
 
     u2_accept();
 
     return sz;
 }
 
-size_t unet_write(uint8_t sock, uint8_t * buf, size_t len) {
-    size_t res, written;
+/*
+ * Write data to a socket
+ *
+ * Arguments:
+ *  sock:   socket ID
+ *  buf:    buffer to write data from
+ *  len:    maximum number of bytes to write
+ *
+ * Returns number of bytes written on success. -1 on error.
+ */
+int unet_write(uint8_t sock, uint8_t * buf, size_t len) {
+    int res, written;
 
     /* Truncate data if necessary so that data+command fits in the U2 command
        buffer */
@@ -74,15 +114,21 @@ size_t unet_write(uint8_t sock, uint8_t * buf, size_t len) {
     res = u2_read((uint8_t *) &written, 2, U2_READ_DATA);
 
     u2_accept();
-    
+
     if (res != 2) {
-        unet_errno = res;
         return 0;
     }
-    
+
     return written;
 }
 
+
+/*
+ * Close a socket
+ *
+ * Arguments:
+ *  sock: socket ID
+ */
 void unet_close(uint8_t sock) {
     u2_start_cmd();
     U2_CMD = U2_TGT_NET;
