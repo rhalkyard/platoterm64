@@ -28,8 +28,6 @@ void io_init_funcptrs(void);
  */
 extern void (*io_open)(void);
 
-extern void (*io_connect)(void);
-
 /**
  * io_send_byte(b) - Send specified byte out
  */

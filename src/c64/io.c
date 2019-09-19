@@ -45,7 +45,6 @@ void io_init_funcptrs(void)
       io_open = io_open_u2eth;
       io_main = io_main_u2eth;
       io_done = io_done_u2eth;
-      io_connect = io_connect_u2eth;
       io_recv_serial_flow_off = io_recv_serial_flow_off_u2eth;
       io_recv_serial_flow_on = io_recv_serial_flow_on_u2eth;
     }

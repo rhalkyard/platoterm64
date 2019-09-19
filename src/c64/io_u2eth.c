@@ -12,28 +12,25 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <peekpoke.h>
 #include "../config.h"
 #include "../prefs.h"
 #include "../protocol.h"
+#include "../plato_key.h"
 
 #include "unet.h"
 #include "ucommand.h"
 
 extern ConfigInfo config;
-
-char connect_host[] = "irata.online";
-const uint16_t connect_port = 8005;
-
 extern uint8_t xoff_enabled;
-
 extern uint8_t recv_buffer[];
 
-char filename[80];
-uint8_t n=0;
-FILE * f;
-
 int sock = -255;
+
+char inputbuf[80];
+uint8_t inputbufsz = 0;
+uint8_t promptShown = 0;
 
 char stbuf[256];
 
@@ -42,38 +39,73 @@ char stbuf[256];
  */
 void io_send_byte_u2eth(uint8_t b)
 {
-  if (sock == -1)
-    return;
-  
-  unet_write(sock, &b, 1);
+  if (sock < 0 && inputbufsz < 80) {
+    ShowPLATO(&b, 1);
+    inputbuf[inputbufsz++] = b;
+  } else if (sock >= 0) {
+    unet_write(sock, &b, 1);
+  }
 }
 
 void io_open_u2eth(void) {
+  u2_stbuf_enable(stbuf, 256);
 }
 
-void io_connect_u2eth(void) {
-  u2_stbuf_enable(stbuf, 256);
-  sock = unet_open(1, connect_port, connect_host);
+void u2eth_show_connect_prompt(void) {
+  const char promptMsg[] = "Enter a host:port to connect to:\r\n";
+  ShowPLATO((padByte *) promptMsg, strlen(promptMsg));
+}
 
-  prefs_clear();
-  prefs_display(stbuf);
+void u2eth_connect(void) {
+  const char connectingMsg[] = "Connecting... ";
+  const char connErrMsg[] = "Unable to connect: ";
+
+  char * hostname;
+  char * portstr;
+  uint16_t port;
+
+  inputbuf[inputbufsz-1] = '\0';
+  inputbufsz = 0;
+
+  hostname = strtok(inputbuf, ":");
+  portstr = strtok(NULL, ":");
+
+  if (portstr == NULL) {
+    port = 8005;
+  } else {
+    port = atoi(portstr);
+  }
+
+  ShowPLATO((padByte *) connectingMsg, strlen(connectingMsg));
+
+  sock = unet_open(1, port, hostname);
+
+  if (!(stbuf[0]=='0' && stbuf[1]=='0')) {
+    ShowPLATO((padByte *) connErrMsg, strlen(connErrMsg));
+    ShowPLATO(stbuf, strlen(stbuf));
+    sock = -1;
+  }
 }
 
 void io_main_u2eth(void) {
   int sz;
     
-  if (sock < 0)
-    return;
-  
-  // Drain primary serial FIFO as fast as possible.
-  sz = unet_read(sock, recv_buffer, 384);
-  if (sz <= 0) {
-    return;
+  if (sock >= 0) {
+    // Drain primary serial FIFO as fast as possible.
+    sz = unet_read(sock, recv_buffer, 384);
+    if (sz <= 0) {
+      return;
+    }
+
+    ShowPLATO(recv_buffer, sz);
+  } else if (inputbufsz > 0 && inputbuf[inputbufsz-1] == 0x0d) {
+    ShowPLATO("\r\n", 2);
+    u2eth_connect();
+    promptShown = 0;
+  } else if (promptShown == 0) {
+    u2eth_show_connect_prompt();
+    promptShown = 1;
   }
-
-  ShowPLATO(recv_buffer, sz);
-
-  sz = 0;
 }
 
 void io_recv_serial_flow_off_u2eth(void)

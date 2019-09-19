@@ -34,13 +34,11 @@ void main(void)
   config_init();
   touch_init();
   terminal_init();
-  io_init();
   greeting();
+  io_init();
   screen_beep();
   
   already_started=true;
-
-  io_connect();
   
   // And do the terminal
   for (;;)

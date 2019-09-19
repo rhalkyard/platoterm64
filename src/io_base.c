@@ -31,7 +31,6 @@ void io_done_base(void);
 void io_connect_base(void);
 
 void (*io_open)(void) = io_open_base;
-void (*io_connect)(void) = io_connect_base;
 void (*io_main)(void) = io_main_base;
 void (*io_done)(void) = io_done_base;
 
@@ -58,9 +57,12 @@ static struct ser_params params = {
  */
 void io_init(void)
 {
+#if defined(__C64__) || defined(__C128__)
+  // Check for presence of Ultimate-II (0xDF1D in IO memory = 0xC9)
   if (config.io == CONFIG_IO_U2ETH && PEEK(0xDF1D) != 0xc9) {
     config.io = CONFIG_IO_SERIAL;
   }
+#endif
 
   prefs_clear();
   if (config.io == CONFIG_IO_SERIAL) {
@@ -92,10 +94,6 @@ void io_init(void)
     io_init_funcptrs();
     io_open();
   } 
-}
-
-void io_connect_base(void) {
-
 }
 
 /**
