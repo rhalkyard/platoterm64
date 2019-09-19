@@ -16,6 +16,7 @@
 #include "../io.h"
 #include <serial.h>
 #include "../config.h"
+#include "io_u2eth.h"
 
 extern uint8_t io_load_successful;
 extern uint8_t xoff_enabled;
@@ -39,17 +40,29 @@ void io_init_funcptrs(void)
   if (io_load_successful==false)
     return;
   
-  if (config.driver_ser==CONFIG_SERIAL_DRIVER_UP2400)
+  if (config.io == CONFIG_IO_U2ETH)
     {
-      io_serial_buffer_size=io_serial_buffer_size_user_port;
-      io_recv_serial_flow_off=io_recv_serial_flow_off_user_port;
-      io_recv_serial_flow_on=io_recv_serial_flow_on_user_port;
+      io_open = io_open_u2eth;
+      io_main = io_main_u2eth;
+      io_done = io_done_u2eth;
+      io_connect = io_connect_u2eth;
+      io_recv_serial_flow_off = io_recv_serial_flow_off_u2eth;
+      io_recv_serial_flow_on = io_recv_serial_flow_on_u2eth;
     }
-  else if (config.driver_ser==CONFIG_SERIAL_DRIVER_SWIFTLINK)
+  else
     {
-      io_serial_buffer_size=io_serial_buffer_size_swiftlink;
-      io_recv_serial_flow_off=io_recv_serial_flow_off_swiftlink;
-      io_recv_serial_flow_on=io_recv_serial_flow_on_swiftlink;
+      if (config.driver_ser==CONFIG_SERIAL_DRIVER_UP2400)
+        {
+          io_serial_buffer_size=io_serial_buffer_size_user_port;
+          io_recv_serial_flow_off=io_recv_serial_flow_off_user_port;
+          io_recv_serial_flow_on=io_recv_serial_flow_on_user_port;
+        }
+      else if (config.driver_ser==CONFIG_SERIAL_DRIVER_SWIFTLINK)
+        {
+          io_serial_buffer_size=io_serial_buffer_size_swiftlink;
+          io_recv_serial_flow_off=io_recv_serial_flow_off_swiftlink;
+          io_recv_serial_flow_on=io_recv_serial_flow_on_swiftlink;
+        }
     }
 }
 
@@ -60,8 +73,11 @@ void io_send_byte(uint8_t b)
 {
   if (io_load_successful==false)
     return;
-
-  ser_put(b);
+  if (config.io == CONFIG_IO_SERIAL) {
+    ser_put(b);
+  } else if (config.io == CONFIG_IO_U2ETH) {
+    io_send_byte_u2eth(b);
+  }
 }
 
 
@@ -122,7 +138,7 @@ void io_recv_serial_flow_off_swiftlink(void)
   if (io_load_successful==false)
     return;
 
-  io_send_byte(0x13);
+  ser_put(0x13);
   xoff_enabled=true;
 }
 
@@ -134,7 +150,7 @@ void io_recv_serial_flow_on_swiftlink(void)
   if (io_load_successful==false)
     return;
 
-  io_send_byte(0x11);
+  ser_put(0x11);
   xoff_enabled=false;
 }
 

@@ -25,6 +25,7 @@ extern ConfigInfo config;
  */
 void config_set_defaults(void)
 {
+  config.io = CONFIG_IO_SERIAL;
   config.baud = SER_BAUD_9600;
   config.xon_threshold=XON_THRESHOLD;
   config.xoff_threshold=XOFF_THRESHOLD;

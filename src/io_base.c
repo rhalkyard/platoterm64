@@ -20,8 +20,20 @@
 
 #define NULL 0
 
+#define RECV_BUFSZ 384
+
 uint8_t xoff_enabled;
 uint8_t io_load_successful=false;
+
+void io_open_base(void);
+void io_main_base(void);
+void io_done_base(void);
+void io_connect_base(void);
+
+void (*io_open)(void) = io_open_base;
+void (*io_connect)(void) = io_connect_base;
+void (*io_main)(void) = io_main_base;
+void (*io_done)(void) = io_done_base;
 
 uint8_t (*io_serial_buffer_size)(void);
 void (*io_recv_serial_flow_off)(void);
@@ -29,7 +41,7 @@ void (*io_recv_serial_flow_on)(void);
 
 static uint8_t ch=0;
 static uint8_t io_res;
-uint8_t recv_buffer[384];
+uint8_t recv_buffer[RECV_BUFSZ];
 static uint16_t recv_buffer_size=0;
 extern ConfigInfo config;
 
@@ -46,34 +58,50 @@ static struct ser_params params = {
  */
 void io_init(void)
 {
+  if (config.io == CONFIG_IO_U2ETH && PEEK(0xDF1D) != 0xc9) {
+    config.io = CONFIG_IO_SERIAL;
+  }
+
   prefs_clear();
-  prefs_display("serial driver loaded.");
-  io_res=ser_load_driver(io_ser_driver_name(config.driver_ser));
+  if (config.io == CONFIG_IO_SERIAL) {
+    prefs_display("serial driver loaded.");
+    io_res=ser_load_driver(io_ser_driver_name(config.driver_ser));
 
-  if (io_res==SER_ERR_OK)
-    io_load_successful=true;
-  
-  xoff_enabled=false;
+    if (io_res==SER_ERR_OK)
+      io_load_successful=true;
+    
+    xoff_enabled=false;
 
-  if (io_load_successful)
-    {
-      io_init_funcptrs();
-      io_open();
-      prefs_clear();
-      prefs_display("serial driver opened.");
-    }
-  else
-    {
-      prefs_clear();
-      prefs_display(recv_buffer);
-    }
-  
+    if (io_load_successful)
+      {
+        io_init_funcptrs();
+        io_open();
+        prefs_clear();
+        prefs_display("serial driver opened.");
+      }
+    else
+      {
+        prefs_clear();
+        sprintf(recv_buffer,"open err: %d",io_res);
+        prefs_display(recv_buffer);
+      }
+
+  } else if (config.io == CONFIG_IO_U2ETH) {
+    prefs_display("Using U2 ethernet for IO.");
+    io_load_successful = true;
+    io_init_funcptrs();
+    io_open();
+  } 
+}
+
+void io_connect_base(void) {
+
 }
 
 /**
  * io_open() - Open the device
  */
-void io_open(void)
+void io_open_base(void)
 {
   params.baudrate = config.baud;
   
@@ -90,47 +118,35 @@ void io_open(void)
 /**
  * io_main() - The IO main loop
  */
-void io_main(void)
+void io_main_base(void)
 {
   if (io_load_successful==false)
     return;
   
   // Drain primary serial FIFO as fast as possible.
-  while (ser_get(&ch)!=SER_ERR_NO_DATA)
+  while (ser_get(&ch)!=SER_ERR_NO_DATA && recv_buffer_size < RECV_BUFSZ)
     {
       recv_buffer[recv_buffer_size++]=ch;
-    }
-  
-  if (xoff_enabled==false)
-    {
-      if (recv_buffer_size>config.xoff_threshold)
-  	{
-  	  io_recv_serial_flow_off();
-  	}
-    }
-  else /* xoff_enabled==true */
-    {
-      if (xoff_enabled==true && recv_buffer_size<config.xon_threshold)
-  	{
-  	  io_recv_serial_flow_on();
-  	}
+      if (xoff_enabled==false && FlowControl && recv_buffer_size>config.xoff_threshold)
+        {
+          io_recv_serial_flow_off();
+        }
     }
 
   ShowPLATO(recv_buffer,recv_buffer_size);
-  recv_buffer_size=0;
-}
 
-/**
- * io_recv_serial() - Receive and interpret serial data.
- */
-void io_recv_serial(void)
-{
+if (xoff_enabled==true)
+	{
+		io_recv_serial_flow_on();
+	}
+
+  recv_buffer_size=0;
 }
 
 /**
  * io_done() - Called to close I/O
  */
-void io_done(void)
+void io_done_base(void)
 {
   if (io_load_successful==false)
     return;
@@ -138,3 +154,4 @@ void io_done(void)
   ser_close();
   ser_uninstall();
 }
+ 

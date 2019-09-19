@@ -78,6 +78,7 @@ void config_save(void)
  */
 void config_set_defaults(void)
 {
+  config.io = CONFIG_IO_SERIAL;
   config.baud = SER_BAUD_1200;
   config.xon_threshold=XON_THRESHOLD;
   config.xoff_threshold=XOFF_THRESHOLD;

@@ -26,7 +26,9 @@ void io_init_funcptrs(void);
 /**
  * io_open() - Open the device
  */
-void io_open(void);
+extern void (*io_open)(void);
+
+extern void (*io_connect)(void);
 
 /**
  * io_send_byte(b) - Send specified byte out
@@ -36,12 +38,12 @@ void io_send_byte(uint8_t b);
 /**
  * io_main() - The IO main loop
  */
-void io_main(void);
+extern void (*io_main)(void);
 
 /**
  * io_recv_serial() - Receive and interpret serial data.
  */
-void io_recv_serial(void);
+// void io_recv_serial(void);
 
 /**
  * io_ser_driver_name() - return serial driver name given constant
@@ -51,6 +53,6 @@ const char* io_ser_driver_name(unsigned char driver);
 /**
  * io_done() - Called to close I/O
  */
-void io_done(void);
+extern void (*io_done)(void);
 
 #endif /* IO_H */

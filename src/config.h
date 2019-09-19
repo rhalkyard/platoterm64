@@ -20,6 +20,8 @@
 #define CONFIG_MOUSE_DRIVER_POT 3
 #define CONFIG_SERIAL_DRIVER_SWIFTLINK 0
 #define CONFIG_SERIAL_DRIVER_UP2400 1
+#define CONFIG_IO_SERIAL 0
+#define CONFIG_IO_U2ETH 1
 
 /* Atari Driver defines */
 #define CONFIG_SERIAL_DRIVER_ATRRDEV 0
@@ -37,6 +39,7 @@
 
 typedef struct configInfo
 {
+  unsigned char io;
   unsigned char baud;
   unsigned char driver_ser;
   unsigned char driver_mou;

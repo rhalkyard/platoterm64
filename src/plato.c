@@ -39,6 +39,8 @@ void main(void)
   screen_beep();
   
   already_started=true;
+
+  io_connect();
   
   // And do the terminal
   for (;;)

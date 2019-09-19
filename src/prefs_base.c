@@ -290,10 +290,18 @@ void prefs_interface(void)
 {
   prefs_display("interface - e)thernet s)erial b)ack: ");
 
-  ch=prefs_get_key_matching("sbSB");
+  ch=prefs_get_key_matching("esbESB");
 
   switch(ch)
     {
+    case 'e':
+      prefs_select("ethernet");
+      config.io = CONFIG_IO_U2ETH;
+      break;
+    case 's':
+      prefs_select("serial");
+      config.io = CONFIG_IO_SERIAL;
+      break;
     case 'b':
       prefs_select("back");
       break;
