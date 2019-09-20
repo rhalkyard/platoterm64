@@ -22,6 +22,7 @@ extern uint8_t (*io_serial_buffer_size)(void);
 extern void (*io_recv_serial_flow_off)(void);
 extern void (*io_recv_serial_flow_on)(void);
 extern uint8_t io_load_successful;
+extern uint8_t already_started;
 
 void io_recv_serial_flow_off_swiftlink(void);
 void io_recv_serial_flow_on_swiftlink(void);
@@ -48,7 +49,7 @@ void io_init_funcptrs(void)
  */
 void io_send_byte(uint8_t b)
 {
-  if (io_load_successful==false)
+  if (io_load_successful==false || already_started == false)
     return;
   
   ser_put(b);
