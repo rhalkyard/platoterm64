@@ -19,6 +19,7 @@
 #include "io_u2eth.h"
 
 extern uint8_t io_load_successful;
+extern uint8_t already_started;
 extern uint8_t xoff_enabled;
 extern ConfigInfo config;
 extern uint8_t (*io_serial_buffer_size)(void);
@@ -70,7 +71,7 @@ void io_init_funcptrs(void)
  */
 void io_send_byte(uint8_t b)
 {
-  if (io_load_successful==false)
+  if (io_load_successful==false || already_started==false)
     return;
   if (config.io == CONFIG_IO_SERIAL) {
     ser_put(b);

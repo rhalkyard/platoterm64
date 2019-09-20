@@ -34,8 +34,8 @@ void main(void)
   config_init();
   touch_init();
   terminal_init();
-  greeting();
   io_init();
+  greeting();
   screen_beep();
   
   already_started=true;
