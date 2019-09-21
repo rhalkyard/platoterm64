@@ -29,16 +29,16 @@ extern unsigned short scaley[];
 
 extern uint16_t mul0375(uint16_t val);
 #define FONTPTR_200(a) (((a << 1) + a) << 1)
-#define FONTPTR_400(a) (a<<4)
+#define FONTPTR_480(a) (a<<4)
 
-#define FONTPTR(a) ((vdcmode == VDC_LORES) ? FONTPTR_200(a) : FONTPTR_400(a))
+#define FONTPTR(a) ((vdcmode == VDC_LORES) ? FONTPTR_200(a) : FONTPTR_480(a))
 
 extern uint8_t font_200[];
-extern uint8_t font_400[];
+extern uint8_t font_480[];
 extern uint8_t fontm23[];
 extern uint8_t FONT_SIZE_X;
 extern uint8_t FONT_SIZE_Y_200;
-extern uint8_t FONT_SIZE_Y_400;
+extern uint8_t FONT_SIZE_Y_480;
 
 uint8_t * font;
 uint8_t FONT_SIZE_Y;
@@ -87,8 +87,8 @@ void screen_load_driver(void)
   switch (tgi_getyres()) {
     case 480:
       vdcmode = VDC_HIRES;
-      font = font_400;
-      FONT_SIZE_Y = FONT_SIZE_Y_400;
+      font = font_480;
+      FONT_SIZE_Y = FONT_SIZE_Y_480;
       break;
     case 200:
       vdcmode = VDC_LORES;

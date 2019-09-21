@@ -25,9 +25,9 @@ extern uint8_t vdcmode;
 extern unsigned char fontm23[2048];
 
 #define FONTPTR_200(a) (((a << 1) + a) << 1)
-#define FONTPTR_400(a) (a << 4)
+#define FONTPTR_480(a) (a << 4)
 
-#define FONTPTR(a) ((vdcmode == VDC_LORES) ? FONTPTR_200(a) : FONTPTR_400(a))
+#define FONTPTR(a) ((vdcmode == VDC_LORES) ? FONTPTR_200(a) : FONTPTR_480(a))
 
 /**
  * terminal_char_load - Store a character into the user definable
