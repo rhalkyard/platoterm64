@@ -15,6 +15,8 @@
 #include <string.h>
 #include <serial.h>
 #include "../config.h"
+#include "../io.h"
+#include "io_u2eth.h"
 
 extern uint8_t xoff_enabled;
 extern ConfigInfo config;
@@ -36,11 +38,22 @@ void io_init_funcptrs(void)
   if (io_load_successful==false)
     return;
   
-  if (config.driver_ser==CONFIG_SERIAL_DRIVER_SWIFTLINK)
+  if (config.io == CONFIG_IO_U2ETH)
     {
-      io_serial_buffer_size=io_serial_buffer_size_swiftlink;
-      io_recv_serial_flow_off=io_recv_serial_flow_off_swiftlink;
-      io_recv_serial_flow_on=io_recv_serial_flow_on_swiftlink;
+      io_open = io_open_u2eth;
+      io_main = io_main_u2eth;
+      io_done = io_done_u2eth;
+      io_recv_serial_flow_off = io_recv_serial_flow_off_u2eth;
+      io_recv_serial_flow_on = io_recv_serial_flow_on_u2eth;
+    }
+  else
+    {
+      if (config.driver_ser==CONFIG_SERIAL_DRIVER_SWIFTLINK)
+        {
+          io_serial_buffer_size=io_serial_buffer_size_swiftlink;
+          io_recv_serial_flow_off=io_recv_serial_flow_off_swiftlink;
+          io_recv_serial_flow_on=io_recv_serial_flow_on_swiftlink;
+        }
     }
 }
 
@@ -49,10 +62,13 @@ void io_init_funcptrs(void)
  */
 void io_send_byte(uint8_t b)
 {
-  if (io_load_successful==false || already_started == false)
+  if (io_load_successful==false || already_started==false)
     return;
-  
-  ser_put(b);
+  if (config.io == CONFIG_IO_SERIAL) {
+    ser_put(b);
+  } else if (config.io == CONFIG_IO_U2ETH) {
+    io_send_byte_u2eth(b);
+  }
 }
 
 /**
