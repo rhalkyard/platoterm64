@@ -23,7 +23,7 @@
 uint8_t xoff_enabled;
 uint8_t io_load_successful=false;
 
-void io_recv_serial_flow_dummy(void);
+static void io_recv_serial_flow_dummy(void);
 
 uint8_t (*io_serial_buffer_size)(void);
 void (*io_recv_serial_flow_off)(void) = io_recv_serial_flow_dummy;
@@ -43,7 +43,7 @@ static struct ser_params params = {
   SER_HS_HW
 };
 
-void io_recv_serial_flow_dummy(void) {}
+static void io_recv_serial_flow_dummy(void) {}
 
 /**
  * io_init() - Set-up the I/O
