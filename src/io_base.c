@@ -57,14 +57,7 @@ static struct ser_params params = {
  */
 void io_init(void)
 {
-#if defined(__C64__) || defined(__C128__)
-  // Check for presence of Ultimate-II (0xDF1D in IO memory = 0xC9)
-  if (config.io == CONFIG_IO_U2ETH && PEEK(0xDF1D) != 0xc9) {
-    config.io = CONFIG_IO_SERIAL;
-  }
-#endif
-
-  prefs_clear();
+   prefs_clear();
   if (config.io == CONFIG_IO_SERIAL) {
     prefs_display("serial driver loaded.");
     io_res=ser_load_driver(io_ser_driver_name(config.driver_ser));
@@ -151,5 +144,6 @@ void io_done_base(void)
   
   ser_close();
   ser_uninstall();
+  ser_unload();
 }
  

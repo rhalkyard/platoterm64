@@ -308,6 +308,11 @@ void prefs_interface(void)
       prefs_select("back");
       break;
     }
+  if (ch!='b')
+    {
+      io_prefs_updated=true;
+      prefs_need_updating=true;
+    }
 }
 
 /**
@@ -413,7 +418,6 @@ void prefs_select(const char* text)
     }
 
   prefs_clear();
-
 }
 
 /**
@@ -426,17 +430,7 @@ void prefs_update(void)
   if (io_prefs_updated==true)
     {
       // Close any serial drivers.
-      prefs_clear();
-      prefs_display("closing serial driver...");
-      ser_close();
-      prefs_clear();
-      prefs_display("unloading serial driver...");
-#if defined(__C64__)
-      // This is a workaround because I suspect up2400 incorrectly unloads itself.
-      ser_uninstall();
-#endif
-      ser_unload();
-      prefs_clear();
+      io_done();
     }
 
   prefs_clear();
@@ -451,12 +445,7 @@ void prefs_update(void)
 
   if (io_prefs_updated==true)
     {
-      prefs_display("loading serial driver...");
-      ser_load_driver(io_ser_driver_name(config.driver_ser));
-      
-      io_init_funcptrs();
-      io_open();
-      prefs_clear();
+      io_init();
     }  
 
   prefs_clear();
