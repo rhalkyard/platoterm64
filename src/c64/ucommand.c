@@ -207,7 +207,7 @@ size_t u2_read(uint8_t * buf, size_t len, uint8_t what) {
     for (sz = 0; sz < len; sz++) {
         res = get();
         if (res >= 0) {
-            buf[sz] = get();
+            buf[sz] = res;
         } else {
             break;
         }
