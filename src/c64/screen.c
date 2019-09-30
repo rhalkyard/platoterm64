@@ -45,6 +45,13 @@ extern uint16_t mul0375(uint16_t val);
 extern void (*io_recv_serial_flow_on)(void);
 extern void (*io_recv_serial_flow_off)(void);
 
+extern void RenderGlyph(void);
+unsigned short cx;
+unsigned char cy;
+unsigned char CharCode;
+unsigned char Flags;
+uint8_t* curfont;
+
 // size of scaled PLATO screen
 padPt actualSize = {320, 192};
 
@@ -218,6 +225,9 @@ void screen_beep(void)
   outb(&SID.v1.ctrl,0);
 }
 
+
+/* TODO: add colour support to fast text routines */
+#ifdef __C64_COLOR__
 /**
  * screen_char_draw(Coord, ch, count) - Output buffer from ch* of length count as PLATO characters
  */
@@ -239,7 +249,6 @@ void screen_char_draw(padPt* Coord, unsigned char* ch, unsigned char count)
   uint8_t mainColor=1;
   uint8_t altColor=0;
   uint8_t *p;
-  uint8_t* curfont;
   
   switch(CurMem)
     {
@@ -309,7 +318,6 @@ void screen_char_draw(padPt* Coord, unsigned char* ch, unsigned char count)
 		{
 		  tgi_setcolor(mainColor);
 		  tgi_setpixel(x,y);
-#ifdef __C64_COLOR__
 		  x_coord=x-4;
 		  y_coord=y;
 		  color_transform(); // take x_coord/y_coord, return offset into color ram in colorpt.
@@ -322,7 +330,6 @@ void screen_char_draw(padPt* Coord, unsigned char* ch, unsigned char count)
 		  asm("pla");          // Pop old kernal banking value off stack back into A
 		  asm("sta $01");      // store
 		  asm("cli");          // and turn back on interrupts, like nothing ever happened.
-#endif
 		}
 
 	      ++x;
@@ -393,7 +400,6 @@ void screen_char_draw(padPt* Coord, unsigned char* ch, unsigned char count)
 		      tgi_setpixel(*px+1,*py);
 		      tgi_setpixel(*px,*py+1);
 		      tgi_setpixel(*px+1,*py+1);
-#ifdef __C64_COLOR__
 		      x_coord=x-4;
 		      y_coord=y;
 		      color_transform(); // take x_coord/y_coord, return offset into color ram in colorpt.
@@ -406,7 +412,6 @@ void screen_char_draw(padPt* Coord, unsigned char* ch, unsigned char count)
 		      asm("pla");          // Pop old kernal banking value off stack back into A
 		      asm("sta $01");      // store
 		      asm("cli");          // and turn back on interrupts, like nothing ever happened.
-#endif
 		    }
 		  tgi_setpixel(*px,*py);
 		}
@@ -442,3 +447,65 @@ void screen_char_draw(padPt* Coord, unsigned char* ch, unsigned char count)
   return;
   
 }
+#else // __C64_COLOR__
+
+/**
+ * screen_char_draw(Coord, ch, count) - Output buffer from ch* of length count as PLATO characters
+ */
+void screen_char_draw(padPt* Coord, unsigned char* ch, unsigned char count)
+{
+
+  unsigned char i;
+  unsigned char dx = FONT_SIZE_X;
+  int16_t offset; /* due to negative offsets */
+
+  Flags=0;
+  
+  switch(CurMem)
+    {
+    case M0:
+      curfont=font;
+      offset=-32;
+      break;
+    case M1:
+      curfont=font;
+      offset=64;
+      break;
+    case M2:
+      curfont=fontm23;
+      offset=-32;
+      break;
+    case M3:
+      curfont=fontm23;
+      offset=32;      
+      break;
+    }
+
+  if (CurMode==ModeInverse)
+    Flags|=0x80;
+  else if (CurMode==ModeWrite)
+    Flags|=0x20;
+  else if (CurMode==ModeErase)
+    Flags|=0x10;
+  
+  if (ModeBold)
+    {
+      dx<<=1;
+      Flags|=0x40;
+    }
+  cx=mul0625((Coord->x&0x1FF));
+
+  if (ModeBold)
+  cy=mul0375((Coord->y+30^0x1FF)&0x1FF);
+  else
+  cy=mul0375((Coord->y+15^0x1FF)&0x1FF);
+
+  for (i=0;i<count;++i)
+    {
+      CharCode=ch[i]+offset;
+      RenderGlyph();
+      cx+=dx;
+    }
+}
+
+#endif // __C64_COLOR__
