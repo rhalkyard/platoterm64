@@ -31,7 +31,7 @@ extern uint16_t mul0375(uint16_t val);
 #define FONTPTR_200(a) (((a << 1) + a) << 1)
 #define FONTPTR_400(a) (a<<4)
 
-#define FONTPTR(a) ((vdcmode == VDC_LORES) ? FONTPTR_200(a) : FONTPTR_400(a))
+#define FONTPTR(a) ((vdcmode & VDC_HIRES) ? FONTPTR_400(a) : FONTPTR_200(a))
 
 extern uint8_t font_200[];
 extern uint8_t font_400[];
@@ -43,8 +43,9 @@ extern uint8_t FONT_SIZE_Y_400;
 uint8_t * font;
 uint8_t FONT_SIZE_Y;
 
+// Use 0x80 to indicate hi-res, so we can test for it with a single BIT instruction
 #define VDC_LORES 0
-#define VDC_HIRES 1
+#define VDC_HIRES 0x80
 uint8_t vdcmode;
 
 extern uint8_t CharWide;
@@ -68,7 +69,6 @@ unsigned short cx;
 unsigned short cy;
 unsigned char * CharPtr;
 unsigned char Flags;
-uint8_t* curfont;
 
 /**
  * screen_init_hook()
@@ -280,6 +280,7 @@ void screen_char_draw(padPt* Coord, unsigned char* ch, unsigned char count)
 
   unsigned char i;
   unsigned char dx = FONT_SIZE_X;
+  uint8_t * curfont;
   int16_t offset; /* due to negative offsets */
 
   Flags=0;

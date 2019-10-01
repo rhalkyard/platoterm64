@@ -18,8 +18,7 @@ static unsigned char BTAB[] = {0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01}; 
 static unsigned char u;
 static unsigned char curr_word;
 
-#define VDC_LORES 0
-#define VDC_HIRES 1
+#define VDC_HIRES 0x80
 extern uint8_t vdcmode;
 
 extern unsigned char fontm23[2048];
@@ -27,7 +26,7 @@ extern unsigned char fontm23[2048];
 #define FONTPTR_200(a) (((a << 1) + a) << 1)
 #define FONTPTR_400(a) (a << 4)
 
-#define FONTPTR(a) ((vdcmode == VDC_LORES) ? FONTPTR_200(a) : FONTPTR_400(a))
+#define FONTPTR(a) ((vdcmode & VDC_HIRES) ? FONTPTR_400(a) : FONTPTR_200(a))
 
 /**
  * terminal_char_load - Store a character into the user definable
@@ -35,9 +34,7 @@ extern unsigned char fontm23[2048];
  */
 void terminal_char_load(padWord charNum, charData theChar)
 {
-  switch (vdcmode)
-  {
-  case VDC_HIRES:
+  if (vdcmode & VDC_HIRES) {
     // clear char data
     memset(&fontm23[FONTPTR(charNum)], 0, 16);
 
@@ -55,9 +52,7 @@ void terminal_char_load(padWord charNum, charData theChar)
 
     // and...that's it, really. :)
 
-    break;
-
-  case VDC_LORES:
+  } else {
     // Clear char data.
     memset(char_data, 0, sizeof(char_data));
 
@@ -80,6 +75,5 @@ void terminal_char_load(padWord charNum, charData theChar)
     fontm23[(charNum * 6) + 3] = char_data[8] | char_data[9];
     fontm23[(charNum * 6) + 4] = char_data[10] | char_data[11] | char_data[12];
     fontm23[(charNum * 6) + 5] = char_data[13] | char_data[14] | char_data[15];
-    break;
   }
 }
