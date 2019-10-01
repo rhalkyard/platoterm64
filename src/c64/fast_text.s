@@ -23,14 +23,20 @@
 .define ByteExtent tmp3
 .define LeftMask tmp4
 
+.define BitmapBuffer regsave
+.define ByteOffset regsave+3
+
+.define RightMask sreg
+.define MiddleMask sreg+1
+
 VBASE := $E000
 
 .segment "DATA"
-RightMask:		.res 1  ; right hand mask
-MiddleMask:		.res 1	; middle mask
-ByteOffset:		.res 1  ; horizontal byte offset on screen
+;RightMask:		.res 1  ; right hand mask
+;MiddleMask:		.res 1	; middle mask
+;ByteOffset:		.res 1  ; horizontal byte offset on screen
 EORMask:		.res 1  ; EOR mask (for reverse video rendering)
-BitmapBuffer:		.res 3  ; character data buffer (in shifted position)
+;BitmapBuffer:	.res 3  ; character data buffer (in shifted position)
 DoubleFlag:		.res 1	; repeat line buffer flag
 LeftBit:		.res 1 	; Left bit to shift in for AND mode
 .code
@@ -168,7 +174,7 @@ DoRender:
 	lda BitmapBuffer	; bits are already reversed
 	and (ptr1),y
 	sta (ptr1),y
-	tya
+	tya					; advance to same line in next card
 	clc
 	adc #8
 	tay
