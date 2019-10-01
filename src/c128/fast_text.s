@@ -15,7 +15,7 @@
 
 .include "zeropage.inc"
 .include "c128.inc"
-.import _curfont, _cx, _cy, _CharCode, _Flags, _FONT_SIZE_X, _FONT_SIZE_Y
+.import _curfont, _cx, _cy, _CharPtr, _Flags, _FONT_SIZE_X, _FONT_SIZE_Y, _vdcmode
 .export _RenderGlyph
 
 .define PixelOffset tmp1
@@ -65,9 +65,14 @@ LeftBit:		.res 1 	; Left bit to shift in for AND mode
 	stx EORMask
 	
 	jsr GetScreenAddress	; load up ScreenAddress and get pixel offset
-	sta	PixelOffset
+	stx	PixelOffset
 
-	jsr GetGlyphAddress		; figure out address of glyph data
+	; jsr GetGlyphAddress		; figure out address of glyph data
+
+	lda _CharPtr
+	sta ptr2
+	lda _CharPtr+1
+	sta ptr2+1
 
 	lda _FONT_SIZE_Y
 	bit _Flags
@@ -238,6 +243,34 @@ Done:
 	dec LineCount
 	beq Finished
 
+	lda _vdcmode
+	beq nextrow
+
+	sec
+	lda ptr1
+	sbc #<21360
+	pha
+
+	lda ptr1+1
+	sbc #>21360
+	bpl @odd
+
+	pla
+	clc
+	lda ptr1
+	adc #<21360
+	sta ptr1
+	lda ptr1+1
+	adc #>21360
+	sta ptr1+1
+	jmp samerow
+	
+@odd:
+	sta ptr1+1
+	pla
+	sta ptr1
+
+nextrow:
 	clc
 	lda ptr1
 	adc #80
@@ -246,6 +279,7 @@ Done:
 	inc ptr1+1
 :
 
+samerow:
 	bit DoubleFlag	; if bit 6 set, we just repeat the previous line using existing buffer content
 	bvc :+
 	jmp DoRender
@@ -268,8 +302,15 @@ Finished:
 ;	adapted from the CALC routine in c64-hi.tgi
 ;	
 ;	returns with byte address in ptr1, pixel index within byte in A
-
+;	TODO - make unified function for both?
 .proc GetScreenAddress
+		lda		_vdcmode
+		bne		:+
+		jmp		GetScreenAddress_lo
+:		jmp		GetScreenAddress_hi
+.endproc
+
+.proc GetScreenAddress_lo
         lda     _cy+1
         sta     ptr1+1
         lda     _cy
@@ -309,49 +350,112 @@ Finished:
         lda     ptr1+1          ; ptr1 = Y*80+x/8
         adc     ptr3
         sta     ptr1+1
-        lda     ptr1+1
-        adc     #0
-        sta     ptr1+1
+
         lda     _cx
         and     #7
+
         rts
 
 .endproc
 
-
-;	Work out offset into glyph data
-
-.proc GetGlyphAddress
-	lda #0
-	sta ptr2+1
-	lda _CharCode
-	
-	asl	; work out char * 6
-	rol ptr2+1
-	sta ptr3
-	ldy ptr2+1
-	sty ptr3+1
-	
-	asl
-	rol ptr2+1
-	
-	clc
-	adc ptr3	; add offset * 2 to offset * 4
-	sta ptr2
-	
-	lda ptr2+1
-	adc ptr3+1
-	sta ptr2+1
-	
-	lda ptr2	; add in base address of font
-	clc
-	adc _curfont
-	sta ptr2
-	lda ptr2+1
-	adc _curfont+1
-	sta ptr2+1
-	rts
+.proc GetScreenAddress_hi
+        lda     _cy
+        pha
+        lda     _cy+1
+        pha
+        lsr
+        ror     _cy              ; Y=Y/2
+        sta     _cy+1
+        sta     ptr1+1
+        lda     _cy
+        asl
+        rol     ptr1+1
+        asl
+        rol     ptr1+1          ; Y*4
+        clc
+        adc     _cy
+        sta     ptr1
+        lda     _cy+1
+        adc     ptr1+1
+        sta     ptr1+1          ; Y*4+Y=Y*5
+        lda     ptr1
+        asl
+        rol     ptr1+1
+        asl
+        rol     ptr1+1
+        asl
+        rol     ptr1+1
+        asl
+        rol     ptr1+1
+        sta     ptr1            ; Y*5*16=Y*80
+        lda     _cx+1
+        sta     ptr3
+        lda     _cx
+        lsr     ptr3
+        ror
+        lsr     ptr3
+        ror
+        lsr     ptr3
+        ror
+        clc
+        adc     ptr1
+        sta     ptr1
+        lda     ptr1+1          ; ptr1 = Y*80+x/8
+        adc     ptr3
+        sta     ptr1+1
+        pla
+        sta     _cy+1
+        pla
+        sta     _cy
+        and     #1
+        beq     @even           ; even line - no offset
+        lda     ptr1
+        clc
+        adc     #<21360
+        sta     ptr1
+        lda     ptr1+1
+        adc     #>21360
+        sta     ptr1+1          ; odd lines are 21360 bytes farther
+@even:  lda     _cx
+        and     #7
+        tax
+        rts
 .endproc
+
+
+; ;	Work out offset into glyph data
+
+; .proc GetGlyphAddress
+; 	lda #0
+; 	sta ptr2+1
+; 	lda _CharCode
+	
+; 	asl	; work out char * 6
+; 	rol ptr2+1
+; 	sta ptr3
+; 	ldy ptr2+1
+; 	sty ptr3+1
+	
+; 	asl
+; 	rol ptr2+1
+	
+; 	clc
+; 	adc ptr3	; add offset * 2 to offset * 4
+; 	sta ptr2
+	
+; 	lda ptr2+1
+; 	adc ptr3+1
+; 	sta ptr2+1
+	
+; 	lda ptr2	; add in base address of font
+; 	clc
+; 	adc _curfont
+; 	sta ptr2
+; 	lda ptr2+1
+; 	adc _curfont+1
+; 	sta ptr2+1
+; 	rts
+; .endproc
 
 
 
