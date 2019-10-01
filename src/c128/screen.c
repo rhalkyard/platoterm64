@@ -63,6 +63,13 @@ extern void (*io_recv_serial_flow_off)(void);
 #define outb(addr,val)        (*(addr)) = (val)
 #define outw(addr,val)        (*(addr)) = (val)
 
+extern void RenderGlyph(void);
+unsigned short cx;
+unsigned short cy;
+unsigned char CharCode;
+unsigned char Flags;
+uint8_t* curfont;
+
 /**
  * screen_init_hook()
  * Called after tgi_init to set any special features, e.g. nmi trampolines.
@@ -271,7 +278,7 @@ void screen_beep(void)
 /**
  * screen_char_draw(Coord, ch, count) - Output buffer from ch* of length count as PLATO characters
  */
-void screen_char_draw(padPt* Coord, unsigned char* ch, unsigned char count)
+void screen_char_draw_slow(padPt* Coord, unsigned char* ch, unsigned char count)
 {
   int16_t offset; /* due to negative offsets */
   uint16_t x;      /* Current X and Y coordinates */
@@ -461,4 +468,66 @@ void screen_char_draw(padPt* Coord, unsigned char* ch, unsigned char count)
 
   return;
   
+}
+
+void screen_char_draw(padPt* Coord, unsigned char* ch, unsigned char count)
+{
+
+  unsigned char i;
+  unsigned char dx = FONT_SIZE_X;
+  int16_t offset; /* due to negative offsets */
+
+  if (vdcmode == VDC_HIRES) {
+    // TODO: support hires mode in fast_text.s
+    screen_char_draw_slow(Coord, ch, count);
+    return;
+  }
+
+  Flags=0;
+  
+  switch(CurMem)
+    {
+    case M0:
+      curfont=font;
+      offset=-32;
+      break;
+    case M1:
+      curfont=font;
+      offset=64;
+      break;
+    case M2:
+      curfont=fontm23;
+      offset=-32;
+      break;
+    case M3:
+      curfont=fontm23;
+      offset=32;      
+      break;
+    }
+
+  if (CurMode==ModeInverse)
+    Flags|=0x80;
+  else if (CurMode==ModeWrite)
+    Flags|=0x20;
+  else if (CurMode==ModeErase)
+    Flags|=0x10;
+  
+  if (ModeBold)
+    {
+      dx<<=1;
+      Flags|=0x40;
+    }
+  cx=SCALEX((Coord->x&0x1FF));
+
+  if (ModeBold)
+  cy=SCALEY((Coord->y+30)&0x1FF);
+  else
+  cy=SCALEY((Coord->y+15)&0x1FF);
+
+  for (i=0;i<count;++i)
+    {
+      CharCode=ch[i]+offset;
+      RenderGlyph();
+      cx+=dx;
+    }
 }
