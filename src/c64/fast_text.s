@@ -18,10 +18,16 @@
 .import _curfont, _cx, _cy, _CharCode, _Flags
 .export _RenderGlyph
 
+.import _current_foreground
+
 .define PixelOffset tmp1
 .define LineCount tmp2
 .define ByteExtent tmp3
 .define LeftMask tmp4
+
+.define CardPtr ptr1
+.define GlyphPtr ptr2
+.define ColorPtr ptr4
 
 .define BitmapBuffer regsave
 .define ByteOffset regsave+3
@@ -29,16 +35,18 @@
 .define RightMask sreg
 .define MiddleMask sreg+1
 
-VBASE := $E000
+CBASE := $D000		; base address of color data (RAM under IO)
+VBASE := $E000		; base address of bitmap (RAM under ROM)
 
 .segment "DATA"
-;RightMask:		.res 1  ; right hand mask
-;MiddleMask:		.res 1	; middle mask
-;ByteOffset:		.res 1  ; horizontal byte offset on screen
+; RightMask:		.res 1  ; right hand mask
+; MiddleMask:		.res 1	; middle mask
+; ByteOffset:		.res 1  ; horizontal byte offset on screen
 EORMask:		.res 1  ; EOR mask (for reverse video rendering)
-;BitmapBuffer:	.res 3  ; character data buffer (in shifted position)
+; BitmapBuffer:	.res 3  ; character data buffer (in shifted position)
 DoubleFlag:		.res 1	; repeat line buffer flag
 LeftBit:		.res 1 	; Left bit to shift in for AND mode
+FGColor:		.res 1	; foreground color nibble, pre-shifted for color RAM
 .code
 	
 .proc _RenderGlyph
@@ -64,8 +72,15 @@ LeftBit:		.res 1 	; Left bit to shift in for AND mode
 	stx EORMask
 	
 	jsr GetScreenAddress	; load up ScreenAddress and get pixel offset
-	sta		PixelOffset
-	sty		ByteOffset
+	sta PixelOffset
+	sty ByteOffset
+
+	lda _current_foreground
+	asl
+	asl
+	asl
+	asl
+	sta FGColor
 
 	jsr GetGlyphAddress		; figure out address of glyph data
 
@@ -110,14 +125,17 @@ LeftBit:		.res 1 	; Left bit to shift in for AND mode
  	sta RightMask
  	sta MiddleMask
  	
-NotTransparent:	
+NotTransparent:
+
+	; set color RAM to foreground color
+	jsr SetColor
+
  	lda #192	; trim off bottom of character if it extends off the foot of the screen
 	sec
 	sbc _cy
 	cmp LineCount	; we now account for double-height glyphs
 	bcs Loop1
 	sta LineCount
-
 Loop1:	
 	ldx #0
 	lda #$10
@@ -138,7 +156,7 @@ Loop1:
 	
 NormalSize:	
 	ldy #0
-	lda (ptr2),y
+	lda (GlyphPtr),y
 	eor EORMask
 
 DoShift:	
@@ -156,10 +174,10 @@ NoShift:
 
 DoRender:
 	sei                     ; Get underneath ROM
-	lda     $01
+	lda $01
 	pha
-	lda     #$34
-	sta     $01
+	lda #$34
+	sta $01
 
 	lda ByteExtent
 	sta ptr3
@@ -172,69 +190,61 @@ DoRender:
 	beq NormalColour
 	
 	lda BitmapBuffer	; bits are already reversed
-	and (ptr1),y
-	sta (ptr1),y
+	and (CardPtr),y
+	sta (CardPtr),y
 	tya					; advance to same line in next card
 	clc
 	adc #8
 	tay
-	; cpy #40
-	; bcs Done
 	
 	dec ptr3
 	bmi Done
 	beq LastByte2
 	
 	lda BitmapBuffer+1
-	and (ptr1),y
-	sta (ptr1),y
+	and (CardPtr),y
+	sta (CardPtr),y
 	tya
 	clc
 	adc #8
 	tay
-	; cpy #40
-	; bcs Done
 	inx
 	
 LastByte2:	
 	lda BitmapBuffer,x
-	and (ptr1),y
-	sta (ptr1),y
+	and (CardPtr),y
+	sta (CardPtr),y
 	jmp Done
 	
 NormalColour:	
-	lda (ptr1),y
+	lda (CardPtr),y
 	and LeftMask
 	ora BitmapBuffer
-	sta (ptr1),y
+	sta (CardPtr),y
 	tya
 	clc
 	adc #8
 	tay
-	; cpy #40	; omit this check if you don't intend to let text run off the screen
-	; bcs Done
 	
 	dec ptr3
 	bmi Done
 	beq LastByte
 	
-	lda (ptr1),y
+	lda (CardPtr),y
 	and MiddleMask
 	ora BitmapBuffer+1
-	sta (ptr1),y
+	sta (CardPtr),y
 	tya
 	clc
 	adc #8
 	tay
-	; cpy #40	; omit this check if you don't intend to let text run off the screen
-	; bcs Done
 	inx
 
 LastByte:	
-	lda (ptr1),y
+	lda (CardPtr),y
 	and RightMask
 	ora BitmapBuffer,x
-	sta (ptr1),y
+	sta (CardPtr),y
 Done:	
 	pla
 	sta     $01
@@ -250,14 +260,25 @@ Done:
 	cmp #7
 	bmi :+
 	
-	; No, advance the card pointer and reset byte offset to 0
+	; No, advance the card and color pointers and reset byte offset to 0
 	clc
-	lda ptr1
+	lda CardPtr
 	adc #<(8 * 40)
-	sta ptr1
-	lda ptr1+1
+	sta CardPtr
+	lda CardPtr+1
 	adc #>(8 * 40)
-	sta ptr1+1
+	sta CardPtr+1
+
+	clc
+	lda ColorPtr
+	adc #40
+	sta ColorPtr
+	lda ColorPtr+1
+	adc #0
+	sta ColorPtr+1
+
+	; moved on to a new card, need to set the appropriate byte in color RAM
+	jsr SetColor
 
 	lda #$ff
 	sta ByteOffset
@@ -268,9 +289,9 @@ Done:
 	jmp DoRender
 :
 
-	inc ptr2
+	inc GlyphPtr
 	bne :+
-	inc ptr2+1
+	inc GlyphPtr+1
 :
 	jmp Loop1
 	
@@ -278,50 +299,84 @@ Finished:
 	rts
 .endproc
 
+.proc SetColor
+	sei
+	lda $01
+	pha
+	and #$FC
+	sta $01
 
+	ldy ByteExtent
+:	lda (ColorPtr), y
+	and #$0F
+	ora FGColor
+	sta (ColorPtr), y
+	dey
+	bpl :-
+
+	pla
+	sta $01
+	cli
+
+	rts
+.endproc
 
 
 ;	Work out the address of the target line
 ;	adapted from the CALC routine in c64-hi.tgi
 ;	
-;	returns with card address in ptr1, byte offset into card in Y, pixel index within byte in A
+;	returns with card address in CardPtr, byte offset into card in Y, pixel index within byte in A
 
 .proc GetScreenAddress
-	lda     _cy
-	sta     ptr3
-	and     #7
+	lda _cy
+	sta ptr3
+	and #7
 	tay
-	lda     _cy
+	lda _cy
 	lsr
 	lsr
 	lsr
-	sta     ptr3
+	sta ptr3
 
-	lda     #00
-	sta     ptr1
-	lda     ptr3
-	cmp     #$80
+	lda #00
+	sta CardPtr
+	lda ptr3
+	cmp #$80
 	ror
-	ror     ptr1
-	cmp     #$80
+	ror CardPtr
+	cmp #$80
 	ror
-	ror     ptr1           ; row*64
-	adc     ptr3           ; +row*256
+	ror CardPtr		; row*64
+	adc ptr3        ; +row*256
 	clc
-	adc     #>VBASE         ; +bitmap base
-	sta     ptr1+1
-
-	lda     _cx
+	adc #>VBASE     ; +bitmap base
+	sta CardPtr+1
+	
+	lda _cx
 	tax
-	and     #$F8
+	and #$F8
 	clc
-	adc     ptr1           ; +(X AND #$F8)
-	sta     ptr1
-	lda     _cx+1
-	adc     ptr1+1
-	sta     ptr1+1
+	adc CardPtr    	; +(X AND #$F8)
+	sta CardPtr
+	sta ColorPtr
+	lda _cx+1
+	adc CardPtr+1
+	sta CardPtr+1
+
+	sec
+	sbc #>VBASE
+	lsr
+	ror ColorPtr
+	lsr
+	ror ColorPtr
+	lsr
+	ror ColorPtr
+	clc
+	adc #>CBASE
+	sta ColorPtr+1
+
 	txa
-	and     #7
+	and #7
 
 	rts
 .endproc
@@ -331,33 +386,33 @@ Finished:
 
 .proc GetGlyphAddress
 	lda #0
-	sta ptr2+1
+	sta GlyphPtr+1
 	lda _CharCode
 	
 	asl	; work out char * 6
-	rol ptr2+1
+	rol GlyphPtr+1
 	sta ptr3
-	ldy ptr2+1
+	ldy GlyphPtr+1
 	sty ptr3+1
 	
 	asl
-	rol ptr2+1
+	rol GlyphPtr+1
 	
 	clc
 	adc ptr3	; add offset * 2 to offset * 4
-	sta ptr2
+	sta GlyphPtr
 	
-	lda ptr2+1
+	lda GlyphPtr+1
 	adc ptr3+1
-	sta ptr2+1
+	sta GlyphPtr+1
 	
-	lda ptr2	; add in base address of font
+	lda GlyphPtr	; add in base address of font
 	clc
 	adc _curfont
-	sta ptr2
-	lda ptr2+1
+	sta GlyphPtr
+	lda GlyphPtr+1
 	adc _curfont+1
-	sta ptr2+1
+	sta GlyphPtr+1
 	rts
 .endproc
 
@@ -368,7 +423,7 @@ Finished:
 
 .proc CreateDoubledBitmap
 	ldy #0
-	lda (ptr2),y
+	lda (GlyphPtr),y
 	eor EORMask
 	lsr
 	lsr
