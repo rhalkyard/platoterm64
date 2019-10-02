@@ -76,9 +76,13 @@ unsigned char Flags;
  */
 void screen_init_hook(void)
 {
-  unsigned char pal[2]={0,1};
+  unsigned char pal[2]={TGI_COLOR_BLACK,TGI_COLOR_WHITE};
   fast();
   tgi_setpalette(pal);
+
+  // Ensure kernal MODE variable reflects that we are using the VDC.
+  // TGI driver should probably do this on init -  waitvsync() will hang otherwise
+  POKE(0xD7, 0x80);
 }
 
 /**
@@ -243,7 +247,7 @@ void screen_update_colors(void)
 {
   pal[0]=config.color_background;
   pal[1]=config.color_foreground;
-  /* tgi_setpalette(pal); */
+  tgi_setpalette(pal);
 }
 
 /**
@@ -259,20 +263,20 @@ void screen_wait(void)
  */
 void screen_beep(void)
 {
-  /* // My feeble attempt at a beep. */
-  /* outw(&SID.v1.freq,0x22cd); */
-  /* outw(&SID.v1.pw,0x0800); */
-  /* outb(&SID.v1.ad,0x33); */
-  /* outb(&SID.v1.sr,0xF0); */
-  /* outb(&SID.amp,0x5F); */
-  /* outw(&SID.flt_freq,0xF0F0); */
-  /* outb(&SID.flt_ctrl,0xF2); */
-  /* outb(&SID.v1.ctrl,0x11); */
-  /* waitvsync(); */
-  /* waitvsync(); */
-  /* waitvsync(); */
-  /* waitvsync(); */
-  /* outb(&SID.v1.ctrl,0); */
+  // My feeble attempt at a beep.
+  outw(&SID.v1.freq,0x22cd);
+  outw(&SID.v1.pw,0x0800);
+  outb(&SID.v1.ad,0x33);
+  outb(&SID.v1.sr,0xF0);
+  outb(&SID.amp,0x5F);
+  outw(&SID.flt_freq,0xF0F0);
+  outb(&SID.flt_ctrl,0xF2);
+  outb(&SID.v1.ctrl,0x11);
+  waitvsync();
+  waitvsync();
+  waitvsync();
+  waitvsync();
+  outb(&SID.v1.ctrl,0);
 }
 
 void screen_char_draw(padPt* Coord, unsigned char* ch, unsigned char count)
