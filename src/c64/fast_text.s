@@ -15,7 +15,7 @@
 
 .include "zeropage.inc"
 .include "c64.inc"
-.import _curfont, _cx, _cy, _CharCode, _Flags
+.import _curfont, _cx, _cy, _CharCode, _Flags, _config
 .export _RenderGlyph
 
 .import _current_foreground
@@ -37,6 +37,9 @@
 
 CBASE := $D000		; base address of color data (RAM under IO)
 VBASE := $E000		; base address of bitmap (RAM under ROM)
+
+config_colormode_offset = 11	; offset of colormode field in config struct
+config_colormode = _config + config_colormode_offset
 
 .segment "DATA"
 ; RightMask:		.res 1  ; right hand mask
@@ -127,10 +130,12 @@ FGColor:		.res 1	; foreground color nibble, pre-shifted for color RAM
  	
 NotTransparent:
 
-	; set color RAM to foreground color
+	; set color RAM to foreground color (if color is enabled)
+	bit config_colormode
+	bpl :+
 	jsr SetColor
 
- 	lda #192	; trim off bottom of character if it extends off the foot of the screen
+: 	lda #192	; trim off bottom of character if it extends off the foot of the screen
 	sec
 	sbc _cy
 	cmp LineCount	; we now account for double-height glyphs
@@ -269,6 +274,14 @@ Done:
 	adc #>(8 * 40)
 	sta CardPtr+1
 
+	; ByteOffset gets incremented at loop exit, so this becomes 0
+	lda #$ff
+	sta ByteOffset
+
+	; Only do color things if color is enabled
+	bit config_colormode
+	bpl :+
+
 	clc
 	lda ColorPtr
 	adc #40
@@ -279,9 +292,6 @@ Done:
 
 	; moved on to a new card, need to set the appropriate byte in color RAM
 	jsr SetColor
-
-	lda #$ff
-	sta ByteOffset
 :	inc ByteOffset
 
 	bit DoubleFlag	; if bit 6 set, we just repeat the previous line using existing buffer content
@@ -299,11 +309,17 @@ Finished:
 	rts
 .endproc
 
+
+;	Set the foreground (high) nybble of conesecutive color ram locations
+;
+;	Expects a pre-shifted value in FGColor, number of locations in ByteExtent,
+; 	pointer to color RAM location in ColorPtr
+
 .proc SetColor
-	sei
+	sei                     ; switch off I/O and ROM
 	lda $01
 	pha
-	and #$FC
+	lda #$34
 	sta $01
 
 	ldy ByteExtent
@@ -358,11 +374,17 @@ Finished:
 	clc
 	adc CardPtr    	; +(X AND #$F8)
 	sta CardPtr
-	sta ColorPtr
 	lda _cx+1
 	adc CardPtr+1
 	sta CardPtr+1
 
+	; only calculate the color pointer if color is enabled
+	bit config_colormode
+	bpl :+
+	pha
+	lda CardPtr
+	sta ColorPtr
+	pla
 	sec
 	sbc #>VBASE
 	lsr
@@ -375,7 +397,7 @@ Finished:
 	adc #>CBASE
 	sta ColorPtr+1
 
-	txa
+:	txa
 	and #7
 
 	rts
@@ -415,8 +437,6 @@ Finished:
 	sta GlyphPtr+1
 	rts
 .endproc
-
-
 
 
 ;	Create double width bitmap

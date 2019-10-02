@@ -57,6 +57,12 @@ void prefs_fill(void);
 void prefs_xonoff(void);
 
 /**
+ * prefs_color()
+ * Toggle color mode
+ */
+void prefs_color(void);
+
+/**
  * prefs_driver(void)
  * Preferences menu to select serial driver
  */

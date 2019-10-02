@@ -183,13 +183,16 @@ void prefs_get_val(void)
 void prefs_other(void)
 {
   prefs_clear();
-  prefs_display("OTHER: x)onoff e)xit: ");
-  ch=prefs_get_key_matching("fxeFXE");
+  prefs_display("OTHER: x)onoff c)olor e)xit: ");
+  ch=prefs_get_key_matching("fxceFXCE");
 
   switch(ch)
     {
     case 'x':
       prefs_xonoff();
+      break;
+    case 'c':
+      prefs_color();
       break;
     case 'e':
       prefs_serial();

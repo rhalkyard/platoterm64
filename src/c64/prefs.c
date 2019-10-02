@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <tgi.h>
 #include "../prefs.h"
 #include "../config.h"
 
@@ -19,6 +20,7 @@ extern uint8_t prefs_need_updating;
 extern uint8_t touch_prefs_updated;
 extern uint8_t io_prefs_updated;
 extern uint8_t io_load_successful;
+extern uint8_t pal[2];
 
 /**
  * Show PLATOTERM READY - Press '<key>' for setup.
@@ -93,3 +95,29 @@ void prefs_driver(void)
   prefs_check_for_io_change();
 }
 
+void prefs_color() {
+  prefs_clear();
+  prefs_display("color - t)ext n)o b)ack: ");
+  
+  ch=prefs_get_key_matching("tnbTNB");
+
+  switch(ch)
+    {
+    case 't':
+      config.color_mode = CONFIG_COLORMODE_TEXT;
+      prefs_select("color text enabled");
+      break;
+    case 'n':
+      config.color_mode = CONFIG_COLORMODE_NONE;
+      prefs_select("color disabled");
+
+      // use tgi_setpalette() to reset color RAM back to configured palette
+      pal[0]=config.color_background;
+      pal[1]=config.color_foreground;
+      tgi_setpalette(pal);
+      break;
+    case 'b':
+      prefs_select("back");
+      break;
+    }
+}

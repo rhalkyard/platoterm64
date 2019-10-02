@@ -78,3 +78,6 @@ void prefs_driver(void)
   prefs_check_for_io_change();
 }
 
+void prefs_color() {
+  prefs_select("not supported");
+}

@@ -21,6 +21,9 @@
 #define CONFIG_SERIAL_DRIVER_SWIFTLINK 0
 #define CONFIG_SERIAL_DRIVER_UP2400 1
 
+#define CONFIG_COLORMODE_NONE 0
+#define CONFIG_COLORMODE_TEXT 0x80
+
 /* Atari Driver defines */
 #define CONFIG_SERIAL_DRIVER_ATRRDEV 0
 #define CONFIG_MOUSE_DRIVER_ATRAMI 0
@@ -46,6 +49,7 @@ typedef struct configInfo
   unsigned short xon_threshold;
   unsigned short xoff_threshold;
   unsigned char fill;
+  unsigned char color_mode;
 } ConfigInfo;
 
 /**

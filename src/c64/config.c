@@ -11,12 +11,13 @@
 #include <cbm.h>
 #include <serial.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <string.h>
 #include "../config.h"
 
 extern ConfigInfo config;
 
-#define CONFIG_DEFAULT_SERIAL_DRIVER CONFIG_SERIAL_DRIVER_UP2400
+#define CONFIG_DEFAULT_SERIAL_DRIVER CONFIG_SERIAL_DRIVER_SWIFTLINK
 #define CONFIG_DEFAULT_MOUSE_DRIVER CONFIG_MOUSE_DRIVER_1351
 
 /**
@@ -34,5 +35,6 @@ void config_set_defaults(void)
   config.color_foreground=TGI_COLOR_WHITE;
   config.color_background=TGI_COLOR_BLACK;
   config.color_border=TGI_COLOR_BLACK;
+  config.color_mode=CONFIG_COLORMODE_TEXT;
   config_save();
 }
