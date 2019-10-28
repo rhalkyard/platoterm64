@@ -364,6 +364,9 @@ dist-c128: $(PROGRAM).c128
 	c1541 -attach dist.c128/platoterm128-1_0.d64 -write dist.c128/c128-vdc.tgi tgi-vdclo
 	c1541 -attach dist.c128/platoterm128-1_0.d64 -write dist.c128/splash.bin splash.bin
 
+	cp dist.c128/platoterm128-1_0.d64 dist.c128/platoterm128lo-1_0.d64
+	c1541 -attach dist.c128/platoterm128lo-1_0.d64 -delete tgi-vdchi
+
 dist-apple2: $(PROGRAM).apple2
 	cp dist.apple2/bootable.po dist.apple2/dist.po
 	java -jar dist.apple2/ac.jar -p dist.apple2/dist.po plato.system sys <dist.apple2/plato.system
