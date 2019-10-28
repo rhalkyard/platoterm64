@@ -35,7 +35,7 @@ extern uint16_t scalety[];
  */
 void touch_init(void)
 {
-#ifndef __APPLE2__
+#if !defined(__APPLE2__) && !defined(__PLUS4__)
   if (config.driver_mou==CONFIG_MOUSE_DRIVER_NONE)
     return;
   
@@ -59,7 +59,7 @@ void touch_init(void)
  */
 void touch_allow(padBool allow)
 {
-#ifndef __APPLE2__
+#if !defined(__APPLE2__) && !defined(__PLUS4__)
   /* // If mouse is off screen (due to previously being moved off screen, move onscreen to make visible. */
   /* if (allow) */
   /*   { */
@@ -83,7 +83,7 @@ void touch_allow(padBool allow)
  */
 void touch_main(void)
 {
-#ifndef __APPLE2__
+#if !defined(__APPLE2__) && !defined(__PLUS4__)
   uint8_t lastbuttons;
   padPt coord;
 
@@ -108,7 +108,7 @@ void touch_main(void)
  */
 void touch_hide(void)
 {
-#ifndef __APPLE2__
+#if !defined(__APPLE2__) && !defined(__PLUS4__)
   mouse_move(screen_w,screen_h);
 #endif
 }
@@ -118,7 +118,7 @@ void touch_hide(void)
  */
 void touch_done(void)
 {
-#ifndef __APPLE2__
+#if !defined(__APPLE2__) && !defined(__PLUS4__)
   if (mouse_present==true)
     mouse_uninstall();
 #endif

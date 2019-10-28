@@ -435,9 +435,11 @@ void prefs_update(void)
   
   if (touch_prefs_updated==true)
     {
+#if !defined(__PLUS4__)
       // Close any touch drivers
       prefs_display("unloading touch driver...");
       mouse_unload();
+#endif
       prefs_clear();
     }
 
@@ -455,6 +457,7 @@ void prefs_update(void)
   
   if (touch_prefs_updated==true)
     {
+#if !defined(__PLUS4__)
       prefs_clear();
       prefs_display("loading touch driver...");
       retv = mouse_load_driver(&mouse_def_callbacks,touch_driver_name(config.driver_mou));
@@ -467,6 +470,7 @@ void prefs_update(void)
 	{
 	  prefs_select("error");
 	}
+#endif
     }
 }
 

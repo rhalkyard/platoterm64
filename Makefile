@@ -9,7 +9,7 @@
  
 # Space or comma separated list of cc65 supported target platforms to build for.
 # Default: c64 (lowercase!)
-TARGETS := c64,c128,atari,apple2,apple2enh
+TARGETS := c64,c128,plus4,atari,apple2,apple2enh
  
 # Name of the final, single-file executable.
 # Default: name of the current dir with target name appended
@@ -36,7 +36,8 @@ ASFLAGS =
 # Additional linker flags and options.
 # Default: none
 LDFLAGS = $(LDFLAGS.$(TARGETS))
-LDFLAGS.atari = --start-addr 0x2420 -Wl -D__RESERVED_MEMORY__=0x2000 -D__STACKSIZE__=0x200 --mapfile plato.map
+LDFLAGS.atari = --start-addr 0x2420 -Wl -D__RESERVED_MEMORY__=0x2000 -D__STACKSIZE__=0x200
+LDFLAGS.plus4 = -C plus4-hires.cfg
  
 # Path to the directory containing C and ASM sources.
 # Default: src
@@ -363,6 +364,13 @@ dist-c128: $(PROGRAM).c128
 	c1541 -attach dist.c128/platoterm128-1_0.d64 -write dist.c128/c128-vdc2.tgi tgi-vdchi
 	c1541 -attach dist.c128/platoterm128-1_0.d64 -write dist.c128/c128-vdc.tgi tgi-vdclo
 	c1541 -attach dist.c128/platoterm128-1_0.d64 -write dist.c128/splash.bin splash.bin
+
+dist-plus4: $(PROGRAM).plus4
+	c1541 -format "platoterm+4,01" d64 dist.plus4/platoterm+4-1_0.d64
+	c1541 -attach dist.plus4/platoterm+4-1_0.d64 -write plato.plus4 platoterm
+#	c1541 -attach dist.plus4/platoterm+4-1_0.d64 -write dist.plus4/gpl-3.0 gpl-3.0 ***TODO***
+	c1541 -attach dist.plus4/platoterm+4-1_0.d64 -write dist.plus4/plus4-stdser.ser ser-stdser
+	c1541 -attach dist.plus4/platoterm+4-1_0.d64 -write dist.plus4/splash.bin splash.bin
 
 dist-apple2: $(PROGRAM).apple2
 	cp dist.apple2/bootable.po dist.apple2/dist.po
